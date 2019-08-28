@@ -83,7 +83,7 @@ exports.handler = function (request, context) {
         console.log(message + message1 + message2);
     }
 
-    function handlePowerControl(request, context) {
+    async function handlePowerControl(request, context) {
         log("handlePowerController(request="+JSON.stringify(request, getCircularReplacer())+")")
 
         let requestMethod = request.directive.header.name;
@@ -92,15 +92,22 @@ exports.handler = function (request, context) {
         responseHeader.name = "Response";
         responseHeader.messageId = responseHeader.messageId + "-R";
         // get user token pass in request
-        let requestToken = request.directive.endpoint.scope.token;
+        let accessToken = request.directive.endpoint.scope.token;
+        let oAuth2Client = createOAuthClient(accessToken);
+        let attributes = await retrieveAttributes(oAuth2Client);
+        let devices = await retrieveDevices(attributes.spreadsheetId, oAuth2Client);
 
         let endpointId = request.directive.endpoint.endpointId;
-        let cookie = request.directive.endpoint.cookie;
+        let [urcid, deviceName] = endpointId.split(":");
 
         //TODO: find entry in Google sheet matching endpointId=URCID:Device & requestMethod=Operation
-        //TODO: make URC return the powerResult value ("ON"/"OFF") and pass it back to Alexa
+        let operation = devices[endpointId][requestMethod];
+        let channel = operation.channel;
+        let parsedData = operation.data;
 
         var powerResult;
+        //TODO: make URC return the powerResult value ("ON"/"OFF") and pass it back to Alexa
+        await executeCommmand(urcid, channel, parsedData);
 
         if (requestMethod === "TurnOn") {
 
@@ -129,7 +136,7 @@ exports.handler = function (request, context) {
                 endpoint: {
                     scope: {
                         type: "BearerToken",
-                        token: requestToken
+                        token: accessToken
                     },
                     endpointId: "demo_id"
                 },
