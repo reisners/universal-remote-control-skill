@@ -14,13 +14,14 @@ To put down an architecture for the system as a whole.
 
 The system consists of the following components:
 * Global components:
-  * Alexa Skill
+  * Alexa Smart Home Skill
   * AWS Lambda
+  * AWS API Gateway websocket endpoint
 * Per user-components:
   * Google Account containing an automatically set-up Google Spreadsheet
-  * Universal Remote Controller (URC)
+  * Universal Remote Controller (URC) device
 
-### Alexa Skill
+### Alexa Smart Home Skill
 
 * Takes care of activation and hands off control to AWS Lambda
 * Links to user's Google Account
@@ -42,9 +43,9 @@ The Spreadsheet contains all necessary configuration data to control the user's 
 ### Universal Remote Controller
 
 * ESP8266 system with IR and RF transmitter
-* has a baked-in unique URCID
-* upon startup establishes websocket connection to AWS Lambda endpoint, passing its URCID
-* receives and executes commands from AWS Lambda
+* has a baked-in unique URCID (from DS2401)
+* upon startup establishes websocket connection to AWS API Gateway (passing its URCID), and keeping that connection permanently alive
+* receives and executes commands that AWS Lambda sends via AWS API Gateway
 
 ## Consequences
 
