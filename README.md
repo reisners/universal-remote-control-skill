@@ -35,6 +35,4 @@ to the URC device via that websocket connection. This message contains the chose
 
 The URC device listens on the open websocket connection for messages and transmits the data to the appliance via infrared of 433MHz radio waves.
 
-![Experimental assembly of the URC device](https://github.com/reisners/universal-remote-control-skill/blob/master/esp8266/image1.jpg =400x)
-
-<img src="https://github.com/reisners/universal-remote-control-skill/blob/master/esp8266/image1.jpg" alt="Experimental assembly of the URC device" style="height:400px;"/>
+<img src="https://github.com/reisners/universal-remote-control-skill/blob/master/esp8266/image1.jpg" alt="Experimental assembly of the URC device" style="width:200px;"/>
