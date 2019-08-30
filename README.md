@@ -1,6 +1,6 @@
 # universal-remote-control-skill
 
-This repository contains resources related to the Universal Remote Control Alexa Skill
+This repository contains resources comprising the Universal Remote Control Alexa Skill
 
 # High-Level Description of the Solution
 
