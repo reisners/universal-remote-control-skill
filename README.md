@@ -37,3 +37,4 @@ The URC device listens on the open websocket connection for messages and transmi
 
 ![Experimental assembly of the URC device](https://github.com/reisners/universal-remote-control-skill/blob/master/esp8266/image1.jpg =400x)
 
+<img src="https://github.com/reisners/universal-remote-control-skill/blob/master/esp8266/image1.jpg" alt="Experimental assembly of the URC device" style="height:400px;"/>
