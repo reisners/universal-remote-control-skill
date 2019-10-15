@@ -41,9 +41,25 @@ char urcid[24];  // buffer to hold device's URCID (DS2401 serial number as a hex
 
 #define IR_PIN D2
 
+#define GREEN_PIN D4
+#define RED_PIN D6
+#define STATUS_INIT 0
+#define STATUS_CONNECTING 1
+#define STATUS_CONNECTED 2
+#define STATUS_EXECUTING 3
+
+uint16_t led_counter = 0;
+int led_status = STATUS_INIT;
+
 IRsend irsend(IR_PIN);
 
 void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
+  pinMode(GREEN_PIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
+  pinMode(RED_PIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
+
+  set_status(STATUS_CONNECTING);  
+  
   USE_SERIAL.begin(115200);
   USE_SERIAL.setDebugOutput(true);
 
@@ -62,7 +78,6 @@ void setup() {
 
   WiFiManager wifiManager;
   wifiManager.autoConnect(urcid);
-
   USE_SERIAL.println("Connected to Wifi.");
 
   // server address, port and URL
@@ -88,6 +103,44 @@ uint16_t rawDataOff[47] = {1302, 384,  1270, 414,  430, 1254,  400, 1284,  400, 
 
 void loop() {
   webSocket.loop();
+  led_loop();
+}
+
+int blink() {
+  return (led_counter % 1000 < 500) ? HIGH : LOW;
+}
+
+void led_loop() {
+  led_counter++;
+  int green = LOW;
+  int red = LOW;
+  int blue = LOW;
+  switch (led_status) {
+    case STATUS_INIT:
+      green = LOW;
+      red = LOW;
+      break;
+    case STATUS_CONNECTING:
+      green = blink();
+      red = HIGH;
+      break;
+    case STATUS_CONNECTED:
+      green = HIGH;
+      red = LOW;
+      break;
+    case STATUS_EXECUTING:
+      green = HIGH;
+      red = LOW;
+      blue = HIGH;
+      break;
+  }
+  digitalWrite(GREEN_PIN, green);
+  digitalWrite(RED_PIN, red);
+  digitalWrite(LED_BUILTIN, blue);
+}
+
+void set_status(int status) {
+  led_status = status;
 }
 
 boolean initializeURCID() {
@@ -167,9 +220,11 @@ void handleWsConnected(uint8_t * payload) {
 
 void handleWsDisconnected(uint8_t * payload) {
   USE_SERIAL.printf("[WSc] Disconnected!\n");
+  set_status(STATUS_CONNECTING);  
 }
 
 void handleWsText(uint8_t * payload) {
+  set_status(STATUS_EXECUTING);
   USE_SERIAL.printf("[WSc] get text: %s\n", payload);
   StaticJsonDocument<1000> json;
   DeserializationError error = deserializeJson(json, payload);
@@ -181,10 +236,12 @@ void handleWsText(uint8_t * payload) {
   } else {
     USE_SERIAL.printf("[WSc] unknown command: %s\n", command);
   }
+  set_status(STATUS_CONNECTED);  
 }
 
 void handleACK(JsonDocument json) {
   USE_SERIAL.printf("ACK\n");
+  set_status(STATUS_CONNECTED);
 }
 
 void handleSEND(JsonDocument json) {

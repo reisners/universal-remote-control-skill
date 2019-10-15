@@ -138,7 +138,7 @@ exports.handler = function (request, context) {
                         type: "BearerToken",
                         token: accessToken
                     },
-                    endpointId: "demo_id"
+                    endpointId: endpointId
                 },
                 payload: {}
             }
