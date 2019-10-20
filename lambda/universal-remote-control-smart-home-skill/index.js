@@ -55,7 +55,7 @@ exports.handler = function (request, context) {
                         "softwareVersion": "0.0",
                         "customIdentifier": urcid
                     },
-                    "cookie": device,
+                    "cookie": {},
                     "connections": [],
                     "capabilities":
                     [
@@ -87,7 +87,8 @@ exports.handler = function (request, context) {
         log("handlePowerController(request="+JSON.stringify(request, getCircularReplacer())+")")
 
         let requestMethod = request.directive.header.name;
-        let responseHeader = request.directive.header;
+        let messageId = request.directive.header.messageId;
+        let responseHeader = Object.assign({}, request.directive.header);
         responseHeader.namespace = "Alexa";
         responseHeader.name = "Response";
         responseHeader.messageId = responseHeader.messageId + "-R";
@@ -105,45 +106,66 @@ exports.handler = function (request, context) {
         let channel = operation.channel;
         let parsedData = operation.data;
 
-        var powerResult;
         //TODO: make URC return the powerResult value ("ON"/"OFF") and pass it back to Alexa
-        await executeCommmand(urcid, channel, parsedData);
+        var response;
+        try {
+            var powerResult = await executeCommmand(urcid, channel, parsedData);
 
-        if (requestMethod === "TurnOn") {
-
-            // Make the call to your device cloud for control
-            // powerResult = stubControlFunctionToYourCloud(endpointId, token, request);
-            powerResult = "ON";
-        }
-       else if (requestMethod === "TurnOff") {
-            // Make the call to your device cloud for control and check for success
-            // powerResult = stubControlFunctionToYourCloud(endpointId, token, request);
-            powerResult = "OFF";
-        }
-        var contextResult = {
-            "properties": [{
-                "namespace": "Alexa.PowerController",
-                "name": "powerState",
-                "value": powerResult,
-                "timeOfSample": "2017-09-03T16:20:50.52Z", //retrieve from result.
-                "uncertaintyInMilliseconds": 50
-            }]
-        };
-        var response = {
-            context: contextResult,
-            event: {
-                header: responseHeader,
-                endpoint: {
-                    scope: {
-                        type: "BearerToken",
-                        token: accessToken
-                    },
-                    endpointId: endpointId
-                },
-                payload: {}
+            if (requestMethod === "TurnOn") {
+    
+                // Make the call to your device cloud for control
+                // powerResult = stubControlFunctionToYourCloud(endpointId, token, request);
+                powerResult = "ON";
             }
-        };
-        log("DEBUG", "Alexa.PowerController ", JSON.stringify(response));
+           else if (requestMethod === "TurnOff") {
+                // Make the call to your device cloud for control and check for success
+                // powerResult = stubControlFunctionToYourCloud(endpointId, token, request);
+                powerResult = "OFF";
+            }
+            var contextResult = {
+                "properties": [{
+                    "namespace": "Alexa.PowerController",
+                    "name": "powerState",
+                    "value": powerResult,
+                    "timeOfSample": "2017-09-03T16:20:50.52Z", //retrieve from result.
+                    "uncertaintyInMilliseconds": 50
+                }]
+            };
+            response = {
+                context: contextResult,
+                event: {
+                    header: responseHeader,
+                    endpoint: {
+                        scope: {
+                            type: "BearerToken",
+                            token: accessToken
+                        },
+                        endpointId: endpointId
+                    },
+                    payload: {}
+                }
+            };
+        } catch (err) {
+            log("ERROR:", err);
+            response = {
+                event: {
+                  header: {
+                    namespace: "Alexa",
+                    name: "ErrorResponse",
+                    messageId: messageId,
+                    payloadVersion: "3"
+                  },
+                  endpoint:{
+                    endpointId: endpointId
+                  },
+                  payload: {
+                    type: "ENDPOINT_UNREACHABLE",
+                    message: err
+                  }
+                }
+              }
+        }
+        log("DEBUG:", "Alexa.PowerController ", JSON.stringify(response));
         context.succeed(response);
     }
 
@@ -248,18 +270,22 @@ exports.handler = function (request, context) {
         const postCalls = connectionData.Items.map(async ({ connectionId }) => {
             console.log("posting "+payloadJson+" to connectionId "+connectionId);
             try {
-                const res = await apigwManagementApi.postToConnection({ ConnectionId: connectionId, Data: payloadJson}).promise();
-                console.log("res = "+res);
+                return await apigwManagementApi.postToConnection({ ConnectionId: connectionId, Data: payloadJson}).promise();
             } catch (e) {
-                console.log("error: "+JSON.stringify(e));
                 if (e.statusCode === 410) {
                     console.log(`Found stale connection, deleting ${connectionId}`);
                     await ddb.delete({ TableName: TABLE_NAME, Key: { connectionId } }).promise();
+                    return null;
                 } else {
-                    throw e
+                    throw e;
                 }
             }
-        });
+        })
+        .filter(postCall => !!postCall);
+
+        if (postCalls.length == 0) {
+            throw new Error("no active connections found");
+        }
         
         await Promise.all(postCalls);
     }
