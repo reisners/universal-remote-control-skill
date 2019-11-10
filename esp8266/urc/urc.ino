@@ -50,13 +50,14 @@ char urcid[24];  // buffer to hold device's URCID (DS2401 serial number as a hex
 
 uint16_t led_counter = 0;
 int led_status = STATUS_INIT;
+int new_status = STATUS_INIT;
 
 IRsend irsend(IR_PIN);
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
-  pinMode(GREEN_PIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
-  pinMode(RED_PIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
+  pinMode(GREEN_PIN, OUTPUT);     // Initialize the GREEN_PIN pin as an output
+  pinMode(RED_PIN, OUTPUT);     // Initialize the RED_PIN pin as an output
 
   set_status(STATUS_CONNECTING);  
   
@@ -73,7 +74,7 @@ void setup() {
   }
 
   if (!initializeURCID()) {
-    return;
+    ESP.reset();
   }
 
   WiFiManager wifiManager;
@@ -90,16 +91,14 @@ void setup() {
   // event handler
   webSocket.onEvent(webSocketEvent);
 
-  // try ever 5000 again if connection has failed
+  // try every 5000 again if connection has failed
   webSocket.setReconnectInterval(5000);
-
+  webSocket.enableHeartbeat(15000, 3000, 2);
+ 
   mySwitch.enableTransmit(RF_PIN);
 
   irsend.begin();
 }
-
-uint16_t rawDataOn[47] = {1276, 410,  1328, 336,  454, 1254,  402, 1284,  430, 1252,  432, 1254,  460, 1226,  430, 1254,  1272, 410,  460, 1228,  430, 1252,  432, 7996,  1272, 412,  1274, 412,  456, 1226,  460, 1226,  432, 1254,  432, 1252,  460, 1224,  432, 1254,  1274, 410,  432, 1254,  460, 1224,  460};
-uint16_t rawDataOff[47] = {1302, 384,  1270, 414,  430, 1254,  400, 1284,  400, 1284,  430, 1256,  1272, 412,  430, 1256,  456, 1228,  430, 1256,  458, 1226,  430, 7998,  1244, 440,  1274, 412,  458, 1226,  430, 1258,  428, 1254,  430, 1256,  1272, 412,  430, 1256,  428, 1256,  430, 1252,  432, 1254,  430};
 
 void loop() {
   webSocket.loop();
@@ -107,26 +106,29 @@ void loop() {
 }
 
 int blink() {
-  return (led_counter % 1000 < 500) ? HIGH : LOW;
+  return (led_counter % 16384 < 8192) ? HIGH : LOW;
 }
 
 void led_loop() {
-  led_counter++;
+  if (led_counter++ == 0) {
+    led_status = new_status;
+  }
   int green = LOW;
   int red = LOW;
   int blue = LOW;
   switch (led_status) {
     case STATUS_INIT:
-      green = LOW;
-      red = LOW;
+      green = HIGH;
+      red = HIGH;
       break;
     case STATUS_CONNECTING:
-      green = blink();
+      green = LOW;
       red = HIGH;
       break;
     case STATUS_CONNECTED:
       green = HIGH;
       red = LOW;
+      blue = blink();
       break;
     case STATUS_EXECUTING:
       green = HIGH;
@@ -140,7 +142,7 @@ void led_loop() {
 }
 
 void set_status(int status) {
-  led_status = status;
+  new_status = status;
 }
 
 boolean initializeURCID() {
@@ -208,6 +210,18 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
       // send data to server
       // webSocket.sendBIN(payload, length);
       break;
+   case WStype_PING:
+        // pong will be send automatically
+        USE_SERIAL.printf("[WSc] get ping\n");
+        break;
+    case WStype_PONG:
+        // answer to a ping we send
+        USE_SERIAL.printf("[WSc] get pong\n");
+        break;
+    default:
+      USE_SERIAL.printf("[WSc] unknown type: %d\n", type);
+      ESP.reset();
+      break;    
   }
 }
 
