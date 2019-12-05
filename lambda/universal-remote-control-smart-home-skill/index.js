@@ -224,14 +224,18 @@ exports.handler = function (request, context) {
                         try {
                             let [urcid, device, displayCategory, category, operation, channel, jsonData] = row;
                             let endpointId = urcid + ":" + device;
-                            let data = JSON.parse(jsonData);
-                            if (!devices[endpointId]) {
-                                devices[endpointId] = {};
+                            try {
+                                let data = JSON.parse(jsonData);
+                                if (!devices[endpointId]) {
+                                    devices[endpointId] = {};
+                                }
+                                if (devices[endpointId][operation]) {
+                                    console.log("WARNING: duplicate entries for endpointId "+endpointId+" operation "+operation);
+                                }
+                                devices[endpointId][operation] = { urcid: urcid, device: device, displayCategory: displayCategory, category: category, channel: channel, data: data };    
+                            } catch (parseError) {
+                                console.log("ERROR: endpointId "+endpointId+" operation "+operation+" JSON data "+jsonData+" could not be parsed: "+parseError.message);
                             }
-                            if (devices[endpointId][operation]) {
-                                console.log("WARNING: duplicate entries for endpointId "+endpointId+" operation "+operation);
-                            }
-                            devices[endpointId][operation] = { urcid: urcid, device: device, displayCategory: displayCategory, category: category, channel: channel, data: data };
                         } catch (e) {
                             reject(e);
                         }
