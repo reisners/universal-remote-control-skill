@@ -47,10 +47,10 @@ char urcid[24];  // buffer to hold device's URCID (DS2401 serial number as a hex
 #define STATUS_CONNECTING 1
 #define STATUS_CONNECTED 2
 #define STATUS_EXECUTING 3
+#define PONG_MAX 524287
 
-uint16_t led_counter = 0;
+uint32_t countdown = 0;
 int led_status = STATUS_INIT;
-int new_status = STATUS_INIT;
 
 IRsend irsend(IR_PIN);
 
@@ -105,13 +105,9 @@ void loop() {
   led_loop();
 }
 
-int blink() {
-  return (led_counter % 16384 < 8192) ? HIGH : LOW;
-}
-
 void led_loop() {
-  if (led_counter++ == 0) {
-    led_status = new_status;
+  if (countdown > 0) {
+    countdown--;
   }
   int green = LOW;
   int red = LOW;
@@ -120,6 +116,7 @@ void led_loop() {
     case STATUS_INIT:
       green = HIGH;
       red = HIGH;
+      blue = HIGH;
       break;
     case STATUS_CONNECTING:
       green = LOW;
@@ -128,7 +125,7 @@ void led_loop() {
     case STATUS_CONNECTED:
       green = HIGH;
       red = LOW;
-      blue = blink();
+      blue = LOW;
       break;
     case STATUS_EXECUTING:
       green = HIGH;
@@ -136,13 +133,13 @@ void led_loop() {
       blue = HIGH;
       break;
   }
-  digitalWrite(GREEN_PIN, green);
+  analogWrite(GREEN_PIN, countdown >> 9);
   digitalWrite(RED_PIN, red);
   digitalWrite(LED_BUILTIN, blue);
 }
 
 void set_status(int status) {
-  new_status = status;
+  led_status = status;
 }
 
 boolean initializeURCID() {
@@ -217,6 +214,7 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
     case WStype_PONG:
         // answer to a ping we send
         USE_SERIAL.printf("[WSc] get pong\n");
+        countdown = PONG_MAX;
         break;
     default:
       USE_SERIAL.printf("[WSc] unknown type: %d\n", type);
