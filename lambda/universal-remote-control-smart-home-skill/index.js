@@ -196,6 +196,7 @@ exports.handler = function (request, context) {
                 if (err) {
                     reject(err);
                 } else {
+                    console.log("sheet(s) found on google drive: "+res.data.files.map(sheet => sheet.id));
                     resolve({spreadsheetId: res.data.files[0].id});
                 }
             });    
