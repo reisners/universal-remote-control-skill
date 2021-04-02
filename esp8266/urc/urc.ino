@@ -24,6 +24,11 @@
 #include <IRsend.h>
 #include <IRUtils.h>
 
+#include <WiFiUdp.h>
+WiFiUDP UDP;
+#include <WakeOnLan.h>
+WakeOnLan WOL(UDP);
+
 RCSwitch mySwitch = RCSwitch();
 
 ESP8266WiFiMulti WiFiMulti;
@@ -79,7 +84,7 @@ void setup() {
 
   WiFiManager wifiManager;
   wifiManager.autoConnect(urcid);
-  USE_SERIAL.println("Connected to Wifi.");
+  USE_SERIAL.println("Connected to Wifi.\n");
 
   // server address, port and URL
   webSocket.beginSSL("ord61b4er1.execute-api.eu-west-1.amazonaws.com", 443, "/beta");
@@ -98,6 +103,11 @@ void setup() {
   mySwitch.enableTransmit(RF_PIN);
 
   irsend.begin();
+
+  WOL.setRepeat(3, 100); // Repeat the packet three times with 100ms delay between
+  USE_SERIAL.println("WOL.setRepeat() ok\n");
+  WOL.calculateBroadcastAddress(WiFi.localIP(), WiFi.subnetMask());
+  USE_SERIAL.println("WOL.calculateBroadcastAddress() ok\n");
 }
 
 void loop() {
@@ -263,6 +273,8 @@ void handleSEND(JsonDocument json) {
     sendIR(json);
   } else if (!strcmp(channel, "RF433MHZ")) {
     sendRF433MHz(json);
+  } else if (!strcmp(channel, "WakeOnLan")) {
+    sendWakeOnLan(json);
   } else {
     USE_SERIAL.printf("[SEND] unknown channel: %s\n", channel);
   }
@@ -365,6 +377,12 @@ void sendRF433MHz(JsonDocument json) {
   mySwitch.setProtocol(protocol);
   mySwitch.send(code);
   USE_SERIAL.printf("[RF433MHz] pulseLength=%d, protocol=%d, code=%s\n", pulseLength, protocol, code);
+}
+
+void sendWakeOnLan(JsonDocument json) {
+  const char *mac = json["data"]["mac"];
+  WOL.sendMagicPacket(mac);
+  USE_SERIAL.printf("[WakeOnLan] MAC=%s\n", mac);
 }
 
 uint64_t hexToUInt64(const char* hex)
