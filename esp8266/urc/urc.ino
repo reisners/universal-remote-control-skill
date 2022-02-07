@@ -261,12 +261,12 @@ void handleWsText(uint8_t * payload) {
   set_status(STATUS_CONNECTED);  
 }
 
-void handleACK(JsonDocument json) {
+void handleACK(const JsonDocument& json) {
   USE_SERIAL.printf("ACK\n");
   set_status(STATUS_CONNECTED);
 }
 
-void handleSEND(JsonDocument json) {
+void handleSEND(const JsonDocument& json) {
   const char *channel = json["channel"];
   USE_SERIAL.printf("SEND --> %s\n", channel);
   if (!strcmp(channel, "IR")) {
@@ -280,7 +280,7 @@ void handleSEND(JsonDocument json) {
   }
 }
 
-void sendIR(JsonDocument json) {
+void sendIR(const JsonDocument& json) {
   const char *protocol = json["data"]["protocol"];
 
   if (!strcmp(protocol, "RC5")) {
@@ -369,7 +369,7 @@ void sendIR(JsonDocument json) {
   }
 }
 
-void sendRF433MHz(JsonDocument json) {
+void sendRF433MHz(const JsonDocument& json) {
   const int protocol = json["data"]["protocol"];
   const int pulseLength = json["data"]["pulse-length"];
   const char *code = json["data"]["code"];
@@ -379,7 +379,7 @@ void sendRF433MHz(JsonDocument json) {
   USE_SERIAL.printf("[RF433MHz] pulseLength=%d, protocol=%d, code=%s\n", pulseLength, protocol, code);
 }
 
-void sendWakeOnLan(JsonDocument json) {
+void sendWakeOnLan(const JsonDocument& json) {
   const char *mac = json["data"]["mac"];
   WOL.sendMagicPacket(mac);
   USE_SERIAL.printf("[WakeOnLan] MAC=%s\n", mac);
