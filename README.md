@@ -33,6 +33,6 @@ which refers to the device metadata created during discovery. The AWS Lambda fun
 websocket connection ID in the AWS Dynamo DB table, deleting any stale connection IDs it finds. It then sends a message
 to the URC device via that websocket connection. This message contains the chosen channel and data package from the Google spreadsheet.
 
-The URC device listens on the open websocket connection for messages and transmits the data to the appliance via infrared of 433MHz radio waves.
+The URC device listens on the open websocket connection for messages and transmits the data to the appliance via infrared or 433MHz radio waves.
 
 <img src="https://github.com/reisners/universal-remote-control-skill/blob/master/esp8266/image1.jpg" alt="Experimental assembly of the URC device" style="width:200px;"/>
