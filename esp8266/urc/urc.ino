@@ -211,7 +211,7 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
       handleWsText(payload);
       break;
     case WStype_BIN:
-      USE_SERIAL.printf("[WSc] get binary length: %u\n", length);
+      USE_SERIAL.printf("[WSc] received %u bytes binary data:\n", length);
       hexdump(payload, length);
 
       // send data to server
@@ -219,11 +219,11 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
       break;
    case WStype_PING:
         // pong will be send automatically
-        USE_SERIAL.printf("[WSc] get ping\n");
+        USE_SERIAL.printf("[WSc] PING\n");
         break;
     case WStype_PONG:
         // answer to a ping we send
-        USE_SERIAL.printf("[WSc] get pong\n");
+        USE_SERIAL.printf("[WSc] PONG\n");
         countdown = PONG_MAX;
         break;
     default:
@@ -247,7 +247,7 @@ void handleWsDisconnected(uint8_t * payload) {
 
 void handleWsText(uint8_t * payload) {
   set_status(STATUS_EXECUTING);
-  USE_SERIAL.printf("[WSc] get text: %s\n", payload);
+  USE_SERIAL.printf("[WSc] received text: %s\n", payload);
   StaticJsonDocument<1000> json;
   DeserializationError error = deserializeJson(json, payload);
   const char *command = json["command"];
@@ -381,8 +381,11 @@ void sendRF433MHz(const JsonDocument& json) {
 
 void sendWakeOnLan(const JsonDocument& json) {
   const char *mac = json["data"]["mac"];
+  const int nrepeat = json["data"]["nrepeat"];
+  const int delayms = json["data"]["delay"];
+  WOL.setRepeat(nrepeat, delayms);
   WOL.sendMagicPacket(mac);
-  USE_SERIAL.printf("[WakeOnLan] MAC=%s\n", mac);
+  USE_SERIAL.printf("[WakeOnLan] MAC=%s nrepeat=%d delay=%dms\n", mac, nrepeat, delayms);
 }
 
 uint64_t hexToUInt64(const char* hex)
